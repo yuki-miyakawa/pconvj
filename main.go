@@ -9,9 +9,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
-func convertImage(src, dest string, quality int) {
+func convertImage(src, dest string, quality int, wg *sync.WaitGroup) {
+	defer wg.Done()
 	srcImg, err := os.Open(src)
 	if err != nil {
 		log.Fatalf("Error opening file: %v", err)
@@ -39,6 +41,7 @@ func convertImage(src, dest string, quality int) {
 }
 
 func main() {
+	var wg sync.WaitGroup
 	original := "./original"
 
 	err := filepath.Walk(original, func(path string, info os.FileInfo, err error) error {
@@ -60,11 +63,13 @@ func main() {
 					return fmt.Errorf("failed to create directory: %v", err)
 				}
 			}
-			convertImage(path, dest, 10)
+			wg.Add(1)
+			convertImage(path, dest, 10, &wg)
 		}
 		return nil
 	})
 	if err != nil {
 		log.Fatalf("Error walking the path %q: %v\n", original, err)
 	}
+	wg.Wait()
 }
